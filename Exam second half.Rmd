@@ -1,0 +1,1192 @@
+---
+title: "Exam Exercises"
+author: "Brandon Pover, Jackson Hittner, Debtanu Bandyopadhyay, Aatheep Gurubaran"
+date: "08/16/2021"
+output:
+  word_document: default
+  pdf_document: default
+---
+# Problem 1: Green Buildings
+```{r, echo=FALSE,message=FALSE,error=FALSE,include=FALSE}
+library(corrplot)
+library(cowplot)
+library(LICORS)
+library(RColorBrewer)
+library(mosaic)
+library(tidyverse)
+raw.data <- read.csv(file.choose())
+```
+
+```{r,echo=FALSE,message=FALSE,error=FALSE,warning=FALSE}
+data.raw$green_rating <- as.factor(data.raw$green_rating)
+attach(data.raw)
+ggplot(data=data.raw) + geom_boxplot(mapping=aes(x=green_rating, y=Rent)) + ggtitle('Rent vs. Green Rating')
+```
+
+
+```{r,echo=FALSE,message=FALSE,error=FALSE}
+paste("Median rent for green buildings: ", 
+      median(data.raw$Rent[data.raw$green_rating == 1]))
+paste("Median rent for non-green buildings: ", 
+      median(data.raw$Rent[data.raw$green_rating == 0]))
+```
+
+### **Steps taken**
+
+* Data was visualized to identify confounding variables affecting rent 
+* Data was visualized to get precise numbers to be be used for calculations 
+
+### **Visualizations**
+
+```{r ,out.width=c('50%', '50%'), fig.show='hold', echo=FALSE}
+ggplot(data=data.raw) + 
+  geom_point(mapping=aes(x=cluster_rent, y=Rent, colour=green_rating)) +
+  labs(x="Cluster Rent", y='Rent', title = 'Green buildings: Cluster rent VS Rent',
+       color='Green building')
+ggplot(data=data.raw) + 
+  geom_point(mapping=aes(x=age, y=Rent, colour=green_rating))+
+  labs(x="Age", y='Rent', title = 'Green buildings: Age VS Rent',
+       color='Green building')
+ggplot(data=data.raw) + 
+  geom_point(mapping=aes(x=size, y=Rent, colour=green_rating)) +
+  labs(x="Size", y='Rent', title = 'Green buildings: Size VS Rent',
+       color='Green building')
+ggplot(data=data.raw) + 
+  geom_point(mapping=aes(x=age, y=Rent, colour=class_a))+
+  labs(x="Age", y='Rent', title = 'Class A: Age VS Rent',
+       color='Class A building')
+```
+**Observations** 
+  
+* There is a slight positive correlation with rent vs cluster rent
+* Rent is somewhat positively correlated with the size
+* A majority of the A buildings are younger
+* Age does not seem to show any correlation with rent 
+* Class a buildings get higher rent as they are premium buildings 
+
+```{r out.width=c('50%', '50%'), fig.show='hold', echo=FALSE,warning=FALSE}
+g = ggplot(data.raw, aes(x=age))
+g + geom_density(aes(fill=factor(green_rating)), alpha=0.4)+
+  labs(x="Age", y='Density', title = 'Distribution of age',
+       fill='Green building')
+ggplot(data.raw, aes(class_a, ..count..)) + geom_bar(aes(fill = green_rating), position = "dodge")+
+  labs(x="Class a", y='Number of buildings', title = 'Class A vs Green Buildings',
+       fill='Green building')
+g = ggplot(data.raw, aes(x=size))
+g + geom_density(aes(fill=factor(green_rating)), alpha=0.4)+
+  labs(x="Size", y='Density', title = 'Distribution of size',
+       fill='Green building')
+medians <- aggregate(Rent ~  class_a, data.raw, median)
+ggplot(data=data.raw, aes(x=factor(class_a), y=Rent, fill=class_a)) + geom_boxplot()+
+  stat_summary(fun=median, colour="darkred", geom="point", 
+               shape=18, size=3,show.legend = FALSE) + 
+  geom_text(data = medians, aes(label = Rent, y = Rent - 20)) +
+  labs(x="Class A", y='Rent', title = 'Rent vs Class a',
+       fill='Class A')
+```
+**Observations** 
+  
+* Most green buildings are younger than non-green buildings 
+* There is a higher proportion of class a buildings in the green buildings
+* The proportion of green and non-green buildings increase as the size of buildings increases
+* There is a significant difference in the of rent of class a and non-class a buildings 
+
+```{r out.width=c('50%', '50%'), fig.show='hold', echo=FALSE}
+data.raw$age_cat <- cut(data.raw$age, breaks = c(0, seq(10, 190, by = 10)), labels = 0:18,right=FALSE)
+medians <- aggregate(Rent~ age_cat + green_rating, data.raw, median)
+ggplot(data = medians, mapping = aes(y = Rent, x = age_cat ,group = green_rating, colour=green_rating)) +
+  geom_line(size=1.2) +
+  labs(x="Age in 10 years", y='Median Rent', title = 'All buildings: Median rent over the years',
+       fill='Green building')
+# Size in 100k
+data.raw$size_cat <- cut(data.raw$size, breaks = c(0, seq(10, 3781045, by = 100000)), labels = 0:37,right=FALSE)
+medians <- aggregate(Rent ~ size_cat + green_rating, data.raw, median)
+ggplot(data = medians, mapping = aes(y = Rent, x = size_cat ,group = green_rating, colour=green_rating)) +
+  geom_line(size=1.2) +
+  labs(x="Size in 100k sq.ft", y='Median Rent', title = 'All buildings: median rent for different building sizes',
+       fill='Green building')
+data_non_class_a <- subset(data.raw, data.raw$class_a != 1)
+data_non_class_a$age_cat <- cut(data_non_class_a$age, breaks = c(0, seq(10, 190, by = 10)), labels = 0:18,right=FALSE)
+medians <- aggregate(Rent~ age_cat + green_rating, data_non_class_a, median)
+ggplot(data = medians, mapping = aes(y = Rent, x = age_cat ,group = green_rating, colour=green_rating)) +
+  geom_line(size=1.2)+
+  labs(x="Age in 10 years", y='Median Rent', title = 'Non-Class A buildings: Median rent over the years',
+       fill='Green building')
+# Size in 100k
+data_non_class_a$size_cat <- cut(data_non_class_a$size, breaks = c(0, seq(10, 3781045, by = 100000)), labels = 0:37,right=FALSE)
+medians <- aggregate(Rent ~ size_cat + green_rating, data_non_class_a, median)
+ggplot(data = medians, mapping = aes(y = Rent, x = size_cat ,group = green_rating, colour=green_rating)) +
+  geom_line(size=1.2)+
+  labs(x="Size in 100k sq.ft", y='Median Rent', title = 'Non-class A buildings: median rent for different building sizes',
+       fill='Green building')
+```
+**Observations** 
+  
+* For a size of 250,000 sq.ft., if the green buildings are a class a building then they have higher rent.
+*	Green buildings have lower rent than non-green ones when they are not class a buildings
+* The rent difference is not uniform across different sizes and ages 
+
+```{r, echo=FALSE, error=FALSE,message=FALSE}
+data_size <- subset(data.raw, data.raw$size > 200000 & data.raw$size < 300000)
+data_size <- subset(data.raw, data_size$class_a == 1)
+data_size_class <- subset(data.raw, data_non_class_a$size > 200000 & data_non_class_a$size < 300000)
+paste("Median leasing rate for class a buildings of sizes ranging from 200k to 300k sq.ft ", 
+      median(data_size$leasing_rate))
+medians <- aggregate(Rent~ age_cat + green_rating, data_size, median)
+medians_1 <- subset(medians, medians$green_rating == 1)
+rent_1<-medians_1[1:5,]$Rent
+medians_0 <- subset(medians, medians$green_rating == 0)
+rent_0<-medians_0[1:5,]$Rent
+paste("Difference in rent for the first 5 years class a buildings: ", 
+      (sum(rent_1,na.rm = T) - sum(rent_0, na.rm = T)) / 5)
+medians <- aggregate(Rent~ age_cat + green_rating, data_size_class, median)
+medians_1 <- subset(medians, medians$green_rating == 1)
+rent_1<-medians_1[1:5,]$Rent
+medians_0 <- subset(medians, medians$green_rating == 0)
+rent_0<-medians_0[1:5,]$Rent
+paste("Difference in rent for the first 5 years for non-class a buildings: ", 
+      (sum(rent_1,na.rm = T) - sum(rent_0, na.rm = T)) / 5 )
+```
+### **Insights** 
+
+The analysis by the stats guru is incorrect since he didn’t consider all the factors that actually affect rent. He used median rent of all buildings to calculate his returns, and then failed to account for the other factors such as size and the class of the buildings in his analysis. Such as how he missed that class a buildings would have yielded a higher rent than the non-green buildings that were class a.
+**Calculations**  
+  
+*	We cannot use fixed difference in rent for calculations since the rent difference was NOT uniform across the various ages and sizes.
+*	Because of the reason above, we should consider only the buildings that have sizes between 200k and 300k sq.ft
+*	Furthermore we should also use the median leasing rate of such buildings and not the 90% rate
+*	We can use the average 5 year return to arrive at the final recommendations since the data didn’t include info. about class a buildings with sizes that ranged from 200-300k sq.ft.
+
+```{r, error=FALSE,message=FALSE}
+paste("If we build a class a green building and if we assume 91.6% occpancy rate, \n it is expected to recuperate the costs in", round(5000000/(3.097*250000*0.916),2), "years")
+```
+**Final recommendation** 
+
+* Unless the building is a Class-A building, we do not recommend to invest in a green building, since the average returns for 5 years are negative
+* To yield positive returns, the builder should invest in Class-A green buildings
+* We can expect an occupancy rate of 91.6% on these buildings 
+*	For green and non-green buildings between 200k-300k that are class a, the average difference in rent is 3.097
+*	Because of this, for a 250k sq.ft building at 91.6% occupancy, we expect to recuperate the costs in 7.05 years, for a 250k sq.ft building at 91.6% occupancy, we expect to recuperate the costs in 7.05 years
+
+# Problem 2: Flights at ABIA
+```{r, echo=FALSE,include=FALSE,warning=FALSE,message=FALSE}
+library(randomForest)
+library(dplyr)
+library(Metrics)
+library(caret)
+library(corrplot)
+library(caret)
+library(e1071)
+
+library(reshape2)
+library(ggplot2)
+library(class) ## a library with lots of classification tools
+library(kknn) ## knn library
+```
+
+```{r,error=FALSE,message=FALSE,echo=FALSE}
+abia <- read.csv(file.choose(),stringsAsFactors = TRUE)
+# cleaning data
+abia$CancellationCode = sub('^$','N',abia$CancellationCode)
+abia$LateAircraftDelay[is.na(abia$LateAircraftDelay)] = 0
+abia$WeatherDelay[is.na(abia$WeatherDelay)] = 0
+abia$CarrierDelay[is.na(abia$CarrierDelay)] = 0
+abia$NASDelay[is.na(abia$NASDelay)] = 0
+abia$SecurityDelay[is.na(abia$SecurityDelay)] = 0
+abia$CancellationCode = as.factor(abia$CancellationCode)
+abia$LateAircraftDelay = as.numeric(abia$LateAircraftDelay)
+summary(abia$LateAircraftDelay)
+abia$Cancelled = as.factor(abia$Cancelled)
+str(abia)
+```
+```{r,echo=FALSE,message=FALSE,error=FALSE}
+# hist of aircraft delays in minutes
+hist(abia$LateAircraftDelay[abia$LateAircraftDelay>0],breaks = 20,main = 'Frequency of Delays in Minutes',xlab = 'Delay in Minutes')
+attach(abia)
+```
+```{r,echo=FALSE,include=FALSE,message=FALSE,error=FALSE}
+# set random seed
+set.seed(1)
+
+# standardize data for correlation
+data.stand <- as.data.frame(scale(abia[-c(1,11,9,18,17,23,10,22)]))
+```
+
+```{r,error=FALSE,message=FALSE,echo=FALSE,warning=FALSE}
+#Draw Correlation Between Variables
+cormat <- round(cor(data.stand),2)
+melted_cormat <- melt(cormat)
+head(melted_cormat)
+
+get_upper_tri <- function(cormat){
+  cormat[lower.tri(cormat)]<- NA
+  return(cormat)
+}
+
+upper_tri <- get_upper_tri(cormat)
+
+melted_cormat <- melt(upper_tri, na.rm = TRUE)
+ggheatmap <- ggplot(melted_cormat, aes(Var2, Var1, fill = value))+
+  geom_tile(color = "white")+
+  scale_fill_gradient2(low = "blue", high = "red", mid = "white",
+                       midpoint = 0, limit = c(-1,1), space = "Lab",
+                       name="Pearson\nCorrelation") +
+  theme_minimal()+ # minimal theme
+  theme(axis.text.x = element_text(angle = 45, vjust = 1,
+                                   size = 12, hjust = 1))+
+  coord_fixed()
+
+ggheatmap +
+  geom_text(aes(Var2, Var1, label = value), color = "black", size = 1.5) +
+  theme(
+    axis.title.x = element_blank(),
+    axis.title.y = element_blank(),
+    panel.grid.major = element_blank(),
+    panel.border = element_blank(),
+    panel.background = element_blank(),
+    axis.ticks = element_blank(),
+    legend.justification = c(1, 0),
+    legend.position = c(0.6, 0.7),
+    legend.direction = "horizontal")+
+  guides(fill = guide_colorbar(barwidth = 7, barheight = 1,
+                               title.position = "top", title.hjust = 0.5))
+```
+**Note**
+
+* No clear correlations besides scheduled departure time and scheduled arrival time
+
+```{r,echo=FALSE,message=FALSE,error=FALSE,include=FALSE}
+# install.packages('Rcpp')
+library(lubridate)
+library(tidyverse)
+# delete NA's from data to prevent errors
+abia = na.omit(abia)
+attach(abia)
+# create date time
+abia %>% 
+  select(Year, Month, DayofMonth) %>% 
+  mutate(Date = make_datetime(Year, Month, DayofMonth))
+# set date time in abia_dt
+make_datetime_100 <-  function(year, month, day, time){
+  make_datetime(Year, Month, DayofMonth, DepTime %/% 100, DepTime %% 100)
+}
+abia_dt <-  abia %>%
+  filter(!is.na(DepTime), !is.na(ArrTime)) %>%
+  mutate(
+    DepTime = make_datetime_100(Year, Month, DayofMonth, DepTime),
+    ArrTime = make_datetime_100(year, month, day, ArrTime),
+    CRSDepTime = make_datetime_100(year, month, day, CRSDepTime),
+    CRSArrTime = make_datetime_100(year, month, day, CRSArrTime)
+  ) 
+abia_dt %>%
+  select(Origin, Dest, ends_with("delay"), ends_with("time"))
+```
+
+```{r,echo=FALSE,message=FALSE,error=FALSE}
+# plot count of flights per day
+abia_dt %>%
+  ggplot(aes(DepTime)) +
+  geom_freqpoly(binwidth=86400
+  ) +
+  ggtitle('Count of Flights per Day')+
+  xlab('Actual Departure Time')+
+  ylab('Frequency of Flights per Day')
+# noticeable decrease in Fall and Winter of 2008
+```
+**Notes**
+
+* Substantial decrease in flights in the Fall and Winter. Potential influence from the 2008 crisis and travel spending.
+
+```{r,echo=FALSE,message=FALSE,error=FALSE}
+abia_dt %>%
+  filter(DepTime< ymd(20080102)) %>%
+  ggplot(aes(DepTime)) +
+  geom_freqpoly(binwidth = 600)+
+  ggtitle('Count of Flights on Jan. 1st, 2008')+
+  xlab('Actual Departure time')+
+  ylab('Flight Frequency')
+# peak at 3pm
+```
+**Notes**
+
+* Flight frequency on Jan. 1st, 2008. The flight frequency peaks at around 3pm and remains relatively busy throughout the day.
+
+```{r,echo=FALSE,message=FALSE,error=FALSE}
+abia_dt %>%
+  mutate(wday = wday(DepTime, label = TRUE)) %>%
+  ggplot(aes(x = wday)) + 
+  geom_bar()+
+  ggtitle('Flight Frequency by Day of Week')+
+  xlab('Day in Week')+
+  ylab('Count of Flights per Day in Week')
+# weekdays are most busy with Saturday being the least
+```
+**Notes**
+
+* The weekdays have the most flights throughout the year. Saturday and Sunday see decreases in frequency as most business travel is done through the weekdays.
+
+```{r,error=FALSE,echo=FALSE,message=FALSE,warning=FALSE}
+abia_dt %>%
+  mutate(minute = minute(DepTime)) %>%
+  group_by(minute) %>%
+  summarize(
+    avg_delay = mean(ArrDelay, na.rm = TRUE), 
+    n = n()) %>%
+  ggplot(aes(minute, avg_delay)) +
+  geom_line()+
+  ggtitle('Avg Delay by Minutes in the Hour')+
+  xlab('Minute in Hour')+
+  ylab('Average Delay per Minute')
+# Flights scheduled at the end of the hour have substantially lower Departure Delays on average
+```
+**Notes**
+
+* This plot shows the average delays per minute within an hour.
+* Flights scheduled at the end of the hour have substantially lower departure delays on average.
+
+```{r,echo=FALSE,message=FALSE,error=FALSE,warning=FALSE}
+abia_dt %>% 
+  count(week = floor_date(DepTime, "week")) %>%
+  ggplot(aes(week, n)) +
+  geom_line() +
+  ggtitle('Flight Frequency by Weeks')+
+  xlab('Week during Year')+
+  ylab('Flight Frequency')
+# same pattern as seen in Flight Frequency by Day
+```
+**Notes**
+
+* This plot shows the flight frequency per week during 2008. It can be seen that the fall and winter months see a substantial decrease in flights. This is surprising as you would expect to see at least a slight bump around Thanksgiving and Christmas times.
+
+```{r,echo=FALSE,message=FALSE,warning=FALSE,error=FALSE}
+abia_dt %>%
+  mutate(time = hour(DepTime) * 100 + minute(DepTime),
+         Mon = as.factor(month
+                         (DepTime))) %>%
+  ggplot(aes(x = time, group = Mon, color = Mon)) +
+  geom_freqpoly(binwidth = 100)+
+  ggtitle('Distribution of Flight Frequency for Each Month per Day')+
+  xlab('Time in Day')+
+  ylab('Frequency of Flights')
+# months maintain similar distribution throughout the year but summer months seem to be more robust to the dips during midday
+```
+**Notes**
+
+* This plot shows the distribution of Flight Frequencies per day and averaged within each month.
+* Months maintain similar distribution throughout the year but summer months seem to be more robust to the dips during midday
+
+```{r,echo=FALSE,message=FALSE,error=FALSE}
+flights <- abia_dt %>%
+  # creating a new variable to classify if a flight is on time or delayed
+  mutate(dep_type = ifelse(DepDelay < 5, "on time", "delayed"))
+# plot a bar chart by month
+qplot(x = Month, fill = dep_type, data = flights, geom = "bar", main = "Frequency of Delayed vs On Time Arrivals by Month")
+#September, October, and November have the smallest delayed to on-time ratios (not surprising since there are generally less flights during this time)
+```
+**Notes**
+
+* September, October, and November have the smallest delayed to on-time ratios (not surprising since there are generally less flights during this time)
+
+```{r,echo=FALSE,warning=FALSE,error=FALSE,message=FALSE,}
+# plot Arrival Delay against Scheduled Departure Time
+set.seed(2)
+# take a 1% random sample of the flights data to make the plot readable
+data = abia_dt %>% sample_frac(.05)
+# add a trend line to the plot
+geom_smooth(span = 0.1)
+ggplot(data, aes(x=CRSDepTime, y= ArrDelay)) + 
+  geom_point() +
+  geom_smooth(span = 1)+
+  ggtitle('Arrival Delays vs. Scheduled Departure Time')+
+  xlab('Scheduled Departure Time')+
+  ylab('Arrival Delays')
+# Arrival Delays seem to peak in December
+```
+**Notes**
+
+* This plot shows a random subset (5%) of Arrival Delays versus Scheduled Departure Time.
+* You can see that most of these flights are early or near their original scheduled times, but the biggest deviation seems to be in December of 2008.
+
+# Problem 3: Portfolio Modeling
+```{r, echo=FALSE,warning=FALSE,message=FALSE,error=FALSE,include=FALSE}
+library(mosaic)
+library(quantmod)
+library(foreach)
+
+# Import a few ETFs
+myETFs = c("IEF", "VTV", "IJT", "SCHH", "USO", "KXI")
+myprices = getSymbols(myETFs, from = "2016-07-31")
+
+# Downloads from Yahoo creates objects in memory - create 6 DFs with tickers as data names
+
+# Adjust for splits and dividends
+IEFa = adjustOHLC(IEF)
+IJTa = adjustOHLC(IJT)
+KXIa = adjustOHLC(KXI)
+SCHHa = adjustOHLC(SCHH)
+USOa = adjustOHLC(USO)
+VTVa = adjustOHLC(VTV)
+```
+**Portfolio Breakdown**
+
+* I chose 6 ETFs for my portfolio, as follows:
+* 1. "IEF" - iShares 7-10 Year Treasury Bond ETF. I selected this ETF because I wanted the portfolio to have some exposure to fixed income securities. Additionally, this ETF provides higher income than ETFs exposed to short-term Treasuries (i.e., 1-3 years). However, with the greater return comes increase interest rate risk due to the longer maturities of the underlying assets
+* 2. "IJT" - iShares S&P Small-Cap 600 Growth ETF. I selected IJT because as a young professional, I am willing to embrace the risk that comes with small, growth plays in the market. With the enhanced risk, the potential returns are larger because small-cap growth companies should, theoretically, have an easier time growing than large-cap companies.
+* 3. "KXI" - iShares Global Consumer Staples ETF. I chose KXI because I wanted some security in case there were some major global event (i.e., the COVID-19 pandemic) that would cause a pullback in demand from consumers. Demand for staple products tends not to fluccuate as much as demand for consumer discretionary items, hence the Consumer Staples sector is a good area to have exposure in the event of a down market while providing solid, if modest, returns in bull markets.
+* 4. "SCHH" - Schwab US REIT ETF. I chose SCHH because I wanted some exposure to real estate without needing to take ownership in a property directly. Real estate is interesting to me because it can provide excess returns in bull markets. Additionally, I believe that there is demand to get back to physical, in-person working environments, which will cause a pickup in demand for commercial real estate as we gradually re-open from the COVID-19 pandemic
+* 5. "USO" - United States Oil Fund LP. I wanted some short-term exposure to oil because it is one of the world's most important sources of energy. 
+* 6. "VTV" - Vanguard Value ETF. I wanted some exposure to large-cap companies due to my investment in the small-cap growth ETF. Large-cap companies are appealing because they provide consistent solid returns and potentially some dividends, as well. This ETF, specifically, tracks the index consisting of roughly 400 holdings mostly in the financials, energy, and industrials sectors, three of the "safest" industries for investors.
+
+```{r, echo=FALSE}
+# Look at close-to-close changes over-time
+plot(ClCl(IEFa))
+```
+**Note**
+
+* This plot shows the close to close changes over time in the IEF ETF
+
+```{r, echo=FALSE}
+# Combine all the returns in a matrix
+all_returns = cbind(	ClCl(IEFa),
+								ClCl(IJTa),
+								ClCl(KXIa),
+								ClCl(SCHHa),
+								ClCl(USOa),
+								ClCl(VTVa))
+head(all_returns) 
+all_returns = as.matrix(na.omit(all_returns))
+```
+**Notes**
+
+* This output shows the first 5 close to close return for all 6 securities.
+
+### We will now simulate the first portfolio consisting of equal weights of each ETF. The portfolio is re-balanced daily with no transaction costs
+
+```{r, echo=FALSE}
+# Simulate Portfolio 1 - Run the simulation of 20 trading days 1000 times
+
+initial_wealth = 100000 # We have $100,000 in capital
+
+set.seed(5)
+sim1 = foreach(i=1:1000, .combine='rbind') %do% {
+	total_wealth = initial_wealth
+	weights = c(1/6, 1/6, 1/6, 1/6, 1/6, 1/6)
+	holdings = weights * total_wealth
+	n_days = 20
+	wealthtracker = rep(0, n_days)
+	for(today in 1:n_days) {
+		return.today = resample(all_returns, 1, orig.ids=FALSE) # This simulates a random trading day from the returns matrix
+		holdings = holdings + holdings*return.today
+		total_wealth = sum(holdings)
+		wealthtracker[today] = total_wealth
+	}
+	wealthtracker
+}
+
+head(sim1)
+hist(sim1[,n_days], 25,main = 'Ending Portfolio Capital for 20 Trading Days ($100,000 Starting Capital)',xlab = 'Portfolio Capital') #n_days = 20 - profit loss distribution for 20 random trading days
+```
+**Notes**
+
+* This histogram shows the simulation of Portfolio 1 on 20 tradings repeated 1000 times.
+```{r, echo=FALSE}
+# Profit/loss for Portfolio 1
+paste('The mean ending wealth is:',round(mean(sim1[,n_days]),2)) # Wealth
+paste('The mean profit/loss is:',round(mean(sim1[,n_days] - initial_wealth),2)) # Profit/loss
+paste('The standard deviation of the profit/loss distribution:',round(sd(sim1[,n_days] - initial_wealth),2)) # Standard deviation of profit/loss distribution
+hist(sim1[,n_days]- initial_wealth, breaks=30,main = 'Profit/Loss Distribution',xlab = 'Change in Initial Wealth')
+```
+
+```{r, echo=FALSE}
+# 5% value at risk:
+abs(quantile(sim1[,n_days]- initial_wealth, prob=0.05))
+```
+**Notes**
+
+* VaR is a statistic that quantifies the extent of possible financial losses for a portfolio or a firm. In the case of the equally-weighted Portfolio 1, our value at risk is $7,460.09. This number represents the portfolio loss, in dollars, that we expect to happen no more than 5% of the time.
+
+**We will now repeat the simulation 2 more times to compute VaR for different portfolio weights**
+
+* Portfolio 2 is risk-seeking, meaning I will allocate more of the initial $100,000 into "IJT" and "USO"
+
+```{r, echo=FALSE,message=FALSE,warning=FALSE}
+# Simulate Portfolio 2 - Run the simulation of 20 trading days 1000 times
+
+initial_wealth = 100000 # We have $100,000 in capital
+
+set.seed(10)
+sim2 = foreach(i=1:1000, .combine='rbind') %do% {
+	total_wealth = initial_wealth
+	weights = c(0.05, 0.5, 0.05, 0.10, 0.20, 0.10)
+	holdings = weights * total_wealth
+	n_days = 20
+	wealthtracker = rep(0, n_days)
+	for(today in 1:n_days) {
+		return.today = resample(all_returns, 1, orig.ids=FALSE) # This simulates a random trading day from the returns matrix
+		holdings = holdings + holdings*return.today
+		total_wealth = sum(holdings)
+		wealthtracker[today] = total_wealth
+	}
+	wealthtracker
+}
+
+head(sim2)
+hist(sim2[,n_days], 25,main = 'Ending Portfolio Capital for 20 Trading Days ($100,000 Starting Capital)',xlab = 'Portfolio Capital') #n_days = 20 - profit loss distribution for 20 random trading days
+```
+```{r, echo=FALSE}
+paste('The mean ending wealth is:',round(mean(sim2[,n_days]),2)) # Wealth
+paste('The mean profit/loss is:',round(mean(sim2[,n_days] - initial_wealth),2)) # Profit/loss
+paste('The standard deviation of the profit/loss distribution:',round(sd(sim2[,n_days] - initial_wealth),2)) # Standard deviation of profit/loss distribution
+hist(sim2[,n_days]- initial_wealth, breaks=30,main = 'Profit/Loss Distribution',xlab = 'Change in Initial Wealth')
+```
+
+
+```{r, echo=FALSE}
+# 5% value at risk:
+abs(quantile(sim2[,n_days]- initial_wealth, prob=0.05))
+```
+**Notes**
+
+* In the case of the risk-seeking Portfolio 2, our value at risk is $10,270 This number represents the portfolio loss, in dollars, that we expect to happen no more than 5% of the time.
+
+**We will now repeat the simulation 1 more time to compute VaR**
+
+* Portfolio 3 is risk-averse, meaning I will allocate more of the initial $100,000 into "IEF", "KXI", and "VTV
+
+```{r, echo=FALSE}
+# Simulate Portfolio 3 - Run the simulation of 20 trading days 1000 times
+
+initial_wealth = 100000 # We have $100,000 in capital
+
+set.seed(50)
+sim3 = foreach(i=1:1000, .combine='rbind') %do% {
+	total_wealth = initial_wealth
+	weights = c(0.40, 0.04, 0.20, 0.15, 0.01, 0.20)
+	holdings = weights * total_wealth
+	n_days = 20
+	wealthtracker = rep(0, n_days)
+	for(today in 1:n_days) {
+		return.today = resample(all_returns, 1, orig.ids=FALSE) # This simulates a random trading day from the returns matrix
+		holdings = holdings + holdings*return.today
+		total_wealth = sum(holdings)
+		wealthtracker[today] = total_wealth
+	}
+	wealthtracker
+}
+
+head(sim3)
+hist(sim3[,n_days], 25,main = 'Ending Portfolio Capital for 20 Trading Days ($100,000 Starting Capital)',xlab = 'Portfolio Capital') #n_days = 20 - profit loss distribution for 20 random trading days
+```
+
+```{r, echo=FALSE}
+# Profit/loss for Portfolio 3
+paste('The mean ending wealth is:',round(mean(sim3[,n_days]),2)) # Wealth
+paste('The mean profit/loss is:',round(mean(sim3[,n_days] - initial_wealth),2)) # Profit/loss
+paste('The standard deviation of the profit/loss distribution:',round(sd(sim3[,n_days] - initial_wealth),2)) # Standard deviation of profit/loss distribution
+hist(sim3[,n_days]- initial_wealth, breaks=30,main = 'Profit/Loss Distribution',xlab = 'Change in Initial Wealth')
+```
+
+```{r, echo=FALSE}
+# 5% value at risk:
+abs(quantile(sim3[,n_days]- initial_wealth, prob=0.05))
+```
+**Notes**
+
+* In the case of the risk-averse Portfolio 3, our value at risk is $4,484.32. This number represents the portfolio loss, in dollars, that we expect to happen no more than 5% of the time.
+
+## Please see the list below for each Portfolio's VaR:
+### Portfolio 1: VaR ($7,460.09), Expected Profit ($1,146.48), Standard Deviation ($5,192.59)
+### Portfolio 2: VaR ($9,646.94), Expected Profit ($1,661.44), Standard Deviation ($8,705.08)
+### Portfolio 3: VaR ($4,484.32), Expected Profit ($955.77), Standard Deviation ($3,662.67)
+
+### The results are consistent with our expectations. Higher expected profit comes with increased VaR and standard deviation of expected profits and losses. Similarly, for less risk, we had lower VaR and lower standard deviation, but a lower expected profit. Overall, this example illustrates the realtionship between risk and expected profit and investors need to consider their risk-tolerance when making investment decisions.
+
+
+#Problem 4: Market Segmentation
+##EDA
+```{r, echo = FALSE,message=FALSE,error=FALSE,warning=FALSE}
+#Reading the data
+sm <- read.csv(choose.files())
+
+# install.packages('skimr')
+#Checking to see if there are nulls in the dataframe
+sum(is.na(sm))
+#0
+
+#Checking the distribution of all columns in the dataframe
+library(skimr)
+skim(sm)
+```
+```{r, echo = FALSE}
+#Creating a sum column to check the total number of tweets and fields per user
+sm$tweets <- sm$chatter + sm$current_events + sm$travel + sm$photo_sharing + sm$uncategorized + sm$tv_film +           sm$sports_fandom + sm$politics + sm$food + sm$family + sm$home_and_garden + sm$music + sm$news + sm$online_gaming + sm$shopping + sm$health_nutrition + sm$college_uni + sm$sports_playing + sm$cooking + sm$eco + sm$computers + sm$business + sm$outdoors + sm$crafts + sm$automotive + sm$art + sm$religion + sm$beauty + sm$parenting + sm$dating + sm$school + sm$personal_fitness + sm$fashion + sm$small_business + sm$spam + sm$adult
+
+summary(sm$tweets)
+```
+
+###Observations:
+*The data has no nulls
+*The values in each column indicate the number of tweets on that particular topic by that user within the time period under observation
+*Most of the topics have a pretty healthy number of people tweeting about them, with only 'spam' and 'adult' having less than 25% of the people tweeting about it - which indicates our data is clean
+*Eevryone has a pretty good number of tweets with the mean overall tweets (assuming each entry into a category to be a tweet) being 41 and the values pretty much evenly spread across quartiles
+
+##Removing irrelevant columns
+We will be removing columns which have less than 25% of the users with at least 1 tweet on that topic. We will also be removing the 'chatter' and 'uncategorized' columns, because as mentioned, these columns primarily refer to tweets that don't fit any of our categories of interest and hence would not add any consumable information if used
+```{r,include=FALSE}
+sm_cln = subset(sm, select = -c(chatter, uncategorized, spam, adult, tweets))
+```
+
+##Correlation Plot
+Let us try a simple correlation matrix between all the categories to see if there is any correlation between them
+```{r,echo=FALSE}
+#Loading the required library
+library(corrplot)
+
+#Removing the column 'X", because it shouldn't be used for correlation
+sm_cor = subset(sm_cln, select = -c(X))
+
+#Creating the correlation matrix
+cor_mat <- cor(sm_cor)
+
+#Rounding it to 2 decimal values
+round(cor_mat, 2)
+
+#Creating the correlation plot
+corrplot(cor_mat, type = "upper", order = "hclust", 
+         tl.col = "black", tl.srt = 45)
+```
+###Observations:
+*Most variables don't really have any correlation
+*However, we could observe some correlations above 0.5, which can be explained by the topics correlated as follows:
+  +'Health nutrition' and 'Personal Fitness' have a correlation of 0.8, because diet is an important part of fitness
+  +Similarly with 'Politics' and 'News', 'Beauty' and 'Fashion'
+  +A couple of interesting correlations were 'Religion' and 'School', 'Beauty' and 'Cooking', because these are topics which are not instinctively related
+*Since most of these topics are not correlated, unless 'Nutrient H2O' is going for a very specific demographic like 'Fitness Enthusiasts' or 'Fashionistas', this method will not help them identify clusters of people to target.
+
+##KNN Clustering
+
+From the name 'Nutrient H2O', we can assume that the company is related to health and nutrition. Hence, we can assume that they'd particularly want to target customers who tweet related to these topics.
+
+So, let us create a flag if someone has tweeted something relating to any of the topics that could be related to this. The 3 topics that pop out are:
+*Sports_playing
+*Health_nutrition
+*Personal_fitness
+
+Using the flag, we can see create clusters based on the rest of the topics and this would help us identify if there are any other topics through which Nutrient H2O can promote its products to reach the intended population
+
+Let us try KNN first to create the clusters and see if there is a discernible pattern
+```{r, echo = FALSE}
+#Normalizing the variables
+#Creating the flag
+library(dplyr)
+
+sm_cln$target <- case_when(
+                            sm_cln$sports_playing > 0 | sm_cln$personal_fitness > 0 | sm_cln$health_nutrition > 0 ~ 1,
+                            TRUE ~ 0
+                          )
+
+table(sm_cln$target)
+#0 - 1,695 1 - 6,187
+
+#Creating a normalization function to normalize the variables
+normalize <-function(x) {(x - min(x)) / (max(x) - min(x))}
+
+#Removing the columns that we won't need for the KNN
+sm_knn <- subset(sm_cln, select = -c(sports_playing, personal_fitness, health_nutrition, X))
+
+#Normalizing the required variables in the dataframe
+sm_norm <-data.frame(sapply(sm_knn[1:29], normalize))
+
+#Creating training and testing dataset
+#We will be using 80% of the dataset for training and 20% for testing
+flag <- sample(1:nrow(sm_norm), 0.8 * nrow(sm_norm))
+
+train <- sm_norm[flag,]
+test <- sm_norm[-flag,]
+
+#Creating the target category
+target_category <- sm_knn[flag, 1]
+
+##extract 5th column if test dataset to measure the accuracy
+test_category <- sm_knn[-flag, 1]
+
+#Loading the required package
+library(class)
+
+#Running the KNN clustering
+pr <- knn(train, test, cl = target_category, k = 89) #We will be using k = sqrt(7882) = 89
+
+#Evaluating model performance
+#Create confusion matrix
+##create confusion matrix
+tab <- table(pr, test_category)
+
+#Calculating the accuracy
+accuracy <- function(x){sum(diag(x)/(sum(rowSums(x)))) * 100}
+print(paste("Accuracy of the model: ", accuracy(tab)))
+
+```
+###Obsercations:
+*The baseline accuracy of the dataset is 78.5%
+*However, the model accuracy on the testing dataset is only 67.6%
+*From the very low accuracy of the model on the test dataset, we can conclude that the tweeting patterns of the users pertaining to the other topics is not very helpful in identifying if they'd be interested in topics relevant to us as well or not. This corroborates with the observation from the correlation matrix as well
+*Thus, this model cannot be reliably used to scout any twitter follower to see if they would be a potential customer or not
+
+##Logistic Regression
+Let us also run a logistic regression model on the same dataset to see if there is any specific influence of the topics of interest on our desired outcome
+```{r, echo = FALSE,error=FALSE,message=FALSE,warning=FALSE}
+#Getting the testing and training dataset
+#Normalizing the required variables in the dataframe
+sm_norm <-data.frame(sm_knn[30], lapply(sm_knn[1:29], normalize))
+
+#Creating training and testing dataset
+#We will be using 80% of the dataset for training and 20% for testing
+flag <- sample(1:nrow(sm_norm), 0.8 * nrow(sm_norm))
+
+train <- sm_norm[flag,]
+test <- sm_norm[-flag,]
+
+# Training model
+logistic_model <- glm(target ~ ., 
+                      data = train, 
+                      family = "binomial")
+
+logistic_model
+   
+# Summary
+summary(logistic_model)
+```
+```{r, echo = FALSE}
+# Predict test data based on model
+predict_reg <- predict(logistic_model, 
+                       test, type = "response")
+predict_reg  
+   
+# Changing probabilities
+predict_reg <- ifelse(predict_reg >0.5, 1, 0)
+   
+# Evaluating model accuracy
+# using confusion matrix
+table(test$target, predict_reg)
+   
+missing_classerr <- mean(predict_reg != test$target)
+print(paste('Accuracy =', 1 - missing_classerr))
+```
+
+```{r,echo=FALSE,error=FALSE,warning=FALSE,message=FALSE}
+#Loading required packages
+
+library(caTools)
+library(ROCR) 
+
+# ROC-AUC Curve
+ROCPred <- prediction(predict_reg, test$target) 
+ROCPer <- performance(ROCPred, measure = "tpr", 
+                             x.measure = "fpr")
+   
+auc <- performance(ROCPred, measure = "auc")
+auc <- auc@y.values[[1]]
+auc
+
+auc <- round(auc, 4)
+
+# Plotting curve
+plot(ROCPer)
+plot(ROCPer, colorize = TRUE, 
+     print.cutoffs.at = seq(0.1, by = 0.1), 
+     main = "ROC CURVE") + abline(a = 0, b = 1)
+```
+
+
+### Observations:
+*From the coefficients, we can observe that online gaming and cooking seem to have a significant effect on the user posting a tweet related to a topic of interest
+*This model also has a much higher than the KNN model, with an accuracy of 77.36%, which is almost equal to the baseline accuracy
+*The area under the curve is 50.61%
+*Thus, our final observations from the analysis indicate that targeting gamers and avid cooks, in addition to the general targeting of their obvious customer groups, would help Nutrient H2O make their marketing strategy more efficient and thereby increase their customer base
+# Problem 5: Author Attribution
+```{r, echo=FALSE, warning= FALSE, message = FALSE}
+# Load in the necessary libraries
+rm(list=ls())
+library(tm)
+library(magrittr)
+library(slam)
+library(proxy)
+library(tibble)
+library(dplyr)
+library(tidyverse)
+```
+
+# Notes:
+* First we loaded in the necessary libraries for text analysis
+
+```{r, echo=FALSE, warning= FALSE, message = FALSE}
+library(tm)
+readerPlain = function(fname){
+  readPlain(elem=list(content=readLines(fname)), 
+            id=fname, language='en') }
+
+# Training Data
+
+list_train = list.dirs("C://Users//Brandon//Desktop//Intro to Machine Learning//R scripts//Data sets//ReutersC50//C50train", recursive = FALSE)
+
+file_list_train = character()
+for (i in list_train){
+  authors = Sys.glob(paste(i, '/*txt', sep = ''))
+  file_list_train = c(authors, file_list_train)
+}
+
+reuters_train = lapply(file_list_train, readerPlain)
+
+
+# Test Data
+
+list_test = list.dirs("C://Users//Brandon//Desktop//Intro to Machine Learning//R scripts//Data sets//ReutersC50//C50test", recursive = FALSE)
+
+file_list_test = character()
+for (i in list_test){
+  authors = Sys.glob(paste(i, '/*txt', sep = ''))
+  file_list_test = c(authors, file_list_test)
+}
+
+reuters_test = lapply(file_list_test, readerPlain)
+```
+
+# Notes
+* Next we read in the data, we did this iterating over the authors in each of the folders after setting the working directory to the location on the computer that stored the data. We used tm to do read the data because it has many reader function. Each one has arguments elem, language, and if. The first function that we use wraps another function around readPlain to read plain text documents in English.
+
+```{r, echo=FALSE, warning= FALSE, message = FALSE}
+# Clean the files names
+
+# Training
+
+mynames_train = file_list_train %>%
+  { strsplit(., '/', fixed = TRUE) } %>%
+  { lapply(., tail, n = 2) } %>%
+  { lapply(., paste0, collapse = '') } %>%
+  unlist
+
+# Test Data
+
+mynames_test = file_list_test %>%
+  { strsplit(., '/', fixed=TRUE) } %>%
+  { lapply(., tail, n=2) } %>%
+  { lapply(., paste0, collapse = '') } %>%
+  unlist
+```
+
+# Notes
+* What we did here was clean up the file names, similar to how we did in class.
+
+```{r, echo=FALSE, warning= FALSE, message = FALSE}
+# Re-naming the articles and creating a corpus of all documents
+
+## For train data
+names(reuters_train) = mynames_train
+
+documents_raw_train = Corpus(VectorSource(reuters_train))
+
+
+## For test data
+names(reuters_test) = mynames_test
+
+documents_raw_test = Corpus(VectorSource(reuters_test))
+```
+
+# Notes
+* The code here applies the new names to the articles from all the authors in the two datasets. We also created a text-mining corpus. 
+
+```{r, echo=FALSE, warning= FALSE, message = FALSE}
+## For train data
+
+my_documents_train = documents_raw_train
+my_documents_train = tm_map(my_documents_train, content_transformer(tolower)) # make everything lowercase
+my_documents_train = tm_map(my_documents_train, content_transformer(removeNumbers)) # remove numbers
+my_documents_train = tm_map(my_documents_train, content_transformer(removePunctuation)) # remove punctuation
+my_documents_train = tm_map(my_documents_train, content_transformer(stripWhitespace)) ## remove excess white-space
+my_documents_train = tm_map(my_documents_train, content_transformer(removeWords), stopwords("en"))
+
+## For test data
+my_documents_test = documents_raw_test
+my_documents_test = tm_map(my_documents_test, content_transformer(tolower)) # make everything lowercase
+my_documents_test = tm_map(my_documents_test, content_transformer(removeNumbers)) # remove numbers
+my_documents_test = tm_map(my_documents_test, content_transformer(removePunctuation)) # remove punctuation
+my_documents_test = tm_map(my_documents_test, content_transformer(stripWhitespace)) ## remove excess white-space
+my_documents_test = tm_map(my_documents_test, content_transformer(removeWords), stopwords("en"))
+```
+
+# Notes
+* These are pre-processing and tokenization steps.
+
+```{r, echo=FALSE, warning= FALSE, message = FALSE}
+# Remove Sparse Data
+
+# For train data 
+
+DTM_reuters_train = DocumentTermMatrix(my_documents_train)
+DTM_reuters_train
+
+# Number of terms of 32,570
+
+DTM_reuters_train = removeSparseTerms(DTM_reuters_train, 0.95)
+DTM_reuters_train
+
+# Number of terms of 801
+
+DTM_reuters_test = DocumentTermMatrix(my_documents_test, control = list
+                                      (dictionary=Terms(DTM_reuters_train)) )
+DTM_reuters_test
+
+# Returns only the words/tokens from the training data - method to deal with words that show up in one place but not another
+```
+
+# Notes
+* Here we get rid of sparse terms that removes words that have 0 counts in more than 95% of the documents. We also made sure to account for words that appeared in the test data but not the train by setting the dictionary in the function DocumentTermMatrix equal to the terms in the training data.
+
+```{r, echo=FALSE, warning= FALSE, message = FALSE}
+# Construct the TDIDF Matrix
+
+## For train data
+N_train = nrow(DTM_reuters_train)
+DTM_reuters_train = as.matrix(DTM_reuters_train)
+TF_mat = DTM_reuters_train/rowSums(DTM_reuters_train)
+IDF_vec = log(1 + N_train/colSums(DTM_reuters_train > 0))
+TFIDF_mat_train = sweep(TF_mat, MARGIN=2, STATS=IDF_vec, FUN="*")  
+
+# For test data
+N_test = nrow(DTM_reuters_test)
+DTM_reuters_test = as.matrix(DTM_reuters_test)
+TF_mat = DTM_reuters_test/rowSums(DTM_reuters_test)
+IDF_vec = log(1 + N_test/colSums(DTM_reuters_test > 0))
+TFIDF_mat_test = sweep(TF_mat, MARGIN=2, STATS=IDF_vec, FUN="*")
+```
+
+# Notes
+* We created the TF_IDF Matrices
+
+```{r, echo=FALSE, warning= FALSE, message = FALSE}
+### PCA on the TFIDF weights for train data:
+
+pc_reuters_train = prcomp(TFIDF_mat_train, scale=TRUE)
+PCA_train = summary(pc_reuters_train)$importance[3,]
+plot(PCA_train, ylab = "Percent of Variance Explained", xlab = "Number of Principal Components" )  
+```
+
+# Notes
+* Based on this graph we chose 120 PCA to fit logisitic regression and randomForest  models
+
+```{r, echo=FALSE, warning= FALSE, message = FALSE}
+### Selecting only 120 components for test and 
+# making predictions on test set by using model generated principal components:
+
+train = pc_reuters_train$x[,1:120]
+test = predict(pc_reuters_train,newdata =TFIDF_mat_test )[,1:120]
+
+train_authors = file_list_train %>%
+  { strsplit(., '/', fixed=TRUE) } %>%
+  { lapply(., tail, n=2) } %>%
+  { lapply(., head, n=1) } %>%
+  { lapply(., paste0, collapse = '') } %>%
+  unlist
+
+test_authors = file_list_test %>%
+  { strsplit(., '/', fixed=TRUE) } %>%
+  { lapply(., tail, n=2) } %>%
+  { lapply(., head, n=1) } %>%
+  { lapply(., paste0, collapse = '') } %>%
+  unlist
+```
+
+```{r, echo=FALSE, warning= FALSE, message = FALSE}
+# Multi Class Logistic Regression
+library(nnet)
+
+logistic_fit = nnet::multinom(train_authors~.,data = as.data.frame(train), MaxNWts = 10000)
+predicted.classes <- logistic_fit %>% predict(as.data.frame(test))
+head(predicted.classes)
+cat("The accuracy from Multi Class logistic regression is \n")
+mean(predicted.classes == test_authors)
+```
+
+```{r, echo=FALSE, warning= FALSE, message = FALSE}
+# Fit Random Forest Model
+
+library(randomForest)
+rf_fit = randomForest(as.factor(train_authors)~.,data =as.data.frame(train),ntree = 1000, mtry =  50, importance = TRUE)
+rf_predicted = predict(rf_fit,newx = test, type = 'response')
+cat(" The accuracy from Random Forests is \n")
+mean(rf_predicted == test_authors)
+```
+
+**Notes**
+
+* Random Forests produced the best out-of-sample accuracy
+# Question 6 - Association Rule Mining
+## EDA
+```{r, echo = FALSE}
+#Reading the data
+g <- read.delim(choose.files(), header = FALSE)
+colnames(g) <- "grocery_list"
+library(Matrix)
+library(arules)
+library(arulesViz)
+library(tidyverse)
+library(Matrix)
+#Checking to see if there are nulls in the dataframe
+sum(is.na(g))
+#0
+
+#Splitting up the total lists into individual components
+g$split <- strsplit(g$grocery_list,",")
+
+g_lst <- as.list(g$split)
+
+#Converting into an item Matrix
+g_im <- as(g_lst, "itemMatrix")
+
+summary(g_im)
+```
+###Observations:
+*There are 9,835 grocery lists
+*The most common items are:
+   +Whole milk
+   +Other vegetables
+   +Rolls/buns
+   +Soda
+   +Yogurt
+*On average, a list had 4.4 items
+*The longest list had 32 items
+*Most common list length is just 1 item
+*Density indicates the number of non-zero cells in the matrix
+*Since the list has a density of 2.6%, it means that 2.6% of all the cells in the matrix have a value
+
+##Frequency Plots
+Let us create frequency plots to see what the most common items are:
+Support indicates the % of transactions the item should be present in, for instance a support of 10% returns items that are present in at least 10% of the lists
+```{r,echo=FALSE}
+#Creating the plot
+itemFrequencyPlot(g_im, support = 0.1)
+```
+###Observations:
+Only 8 items are present in more than 10% of the lists, while only 1 of them (whole milk) is present in 20% of the lists
+
+Let us take a smaller support value of 5% to see other items of interest, which might not be as popular, but are still relatively populat
+```{r, echo = FALSE}
+itemFrequencyPlot(g_im, support = 0.05)
+```
+###Observations:
+This is a much more expansive list with 28 items being present in at least 5% of the lists
+
+Now let us look at the top 10 most common items
+relatively populat
+```{r, echo = FALSE}
+itemFrequencyPlot(g_im, topN = 10)
+```
+###Observations:
+As from the previous information, we can clearly observe that 'Whole milk' is the most popular item, while the other popular items are also generally staples of an American diet. The 10th most popular item is 'Sausage'
+
+##Apriori Algorithm - Rules
+Let us now run the Apriori algorithm and try and identify the rules showing the correlation between purchase of one item on the list and another item.
+
+Since, there will be a correlation only if there are at least 2 items in the set, let us specify the minimum length of the set for each rule to be 2, so that we don't obtain rules with single elements
+
+Let us start with a support value of 1% as a minimum threshold and a confidence value of 25% to ensure that there is a pretty significant proportion of lists with one item that contains the other item as well
+```{r, echo = FALSE}
+g_rules <- apriori(g_im, parameter = list(support = 0.01, confidence = 0.25, minlen = 2))
+
+summary(g_rules)
+```
+###Observations:
+*We have a set of 170 rules which meet our criteria, 96 of which have 2 elements and 74 of which have 3 elements
+*The mean support value is 1.8%, indicating that on average any particular elements present in our rules will be present in at least 1.8% of the lists
+*The mean confidence is 37%, indicating that on average, the components of our rules are present in the same list, 37% of the time
+*The mean lift is 1.87, while the maximum is 3.29, which shows that on average, purchase of 1 item in the rule leads to an increased chance of 1.87 times to purchase the other item(s) in the rule and the maximum such rise in items' association is a likelihood of 3.29 times of purchasing an item present in a list when the other item is bought over when it is not bought
+
+Let us look at the top 10 rules to see which items have the greatest association:
+```{r, echo = FALSE}
+inspect(head(sort(g_rules, by = "lift"), 10))
+```
+###Observations:
+*The highest lift observed earlier was when lists had both 'citrus fruits' and 'other vegetables', this massively increased the chances of purchasing 'root vegetables' as well
+*The top 3 rules all involve root vegetables and it is present in 7 of the top 10 rules, which is pretty indicative of the fact that potato is a very good side when paired with most dishes
+*Although 'Whole milk' was the most commonly present item in the set of lists, it is present in only 1 of the top 10 associations, which is exclusively dairy based products, indicating that milk is primarily bought separately instead of with other items
+
+Let us now also look at the rules with high support and confidence to see if there are any rules which might not be as highly influential, but very strongly associated
+```{r, echo = FALSE}
+inspect(head(sort(g_rules, by = c("confidence", "support")), 10))
+```
+###Observations:
+*Most of the associations with high support and confidence involve 'Whole milk', which is due to the fact that whole milk is the most frequent item in the list. However, the lift for most of these rules is not very high
+*The highest lift amongst these high confidence rules is the one between 'Root vegetables', 'Citrus Fruits' and 'Other vegetables', reinforcing once again that potatoes are a staple in most people's diets
+*There are also very strong relationships between milk and other dairy products, indicating that people general shopped for all dairy products simultaneously
+*Thus, having all the dairy products in the dairy section would definitely help improve sales
+
+Now let us plot the parameters for the rules to see if there is any observable pattern
+```{r, echo = FALSE}
+plot(g_rules, measure = c("support", "confidence"), shading = "lift")
+```
+###Observations:
+*We cannot really observe any noticeable pattern within these plots, with the confidence and lift levels being spread out pretty evenly
+*However, there are very few orders with a high support level, which could be due to the fact that most grocery lists are varied based on user preferences
+
+##Individual Product Rules
+Now let us look at the set of rules for certain individual products like 'Whole Milk' and 'Root Vegetables' and see if we can spot any trend or pattern
+
+First, let us look at 'Root Vegetables'
+```{r, echo = FALSE}
+rv_rules <- sort(subset(g_rules, subset = rhs %in% "root vegetables"), by = "lift")
+summary(rv_rules)
+```
+```{r, echo = FALSE}
+inspect(rv_rules)
+```
+
+```{r, echo = FALSE}
+plot(rv_rules,  measure = c("support", "confidence"), shading = "lift")
+```
+
+###Observations:
+*There are only 9 rules which have root vegetables in them
+*However, all of these are high lift rules, indicating that although root vegetables might not be present in several different lists, their influence on purchase of the items they are associated with is really high
+*This indicates that the store would be served well by putting all the vegetables and fruits in their own section, to ensure that customers have ease of access
+*As previously noted, most of these rules have a good confidence level and very high lift, indicating that the root vegetables have a good association with other vegetables, fruits, milk and meat
+
+Now let us look at whole milk rules
+```{r, echo = FALSE}
+wm_rules <- sort(subset(g_rules, subset = rhs %in% "whole milk"), by = "lift")
+summary(wm_rules)
+```
+```{r, echo = FALSE}
+inspect(wm_rules)
+```
+```{r, echo = FALSE}
+plot(wm_rules,  measure = c("support", "confidence"), shading = "lift")
+```
+###Observations:
+*Whole milk is present in a lot more rules than root vegetables, with it being present in 68 rules
+*Most of these rules, however, have a lower lift than the root vegetable rules, but have very high confidence and support, because of the prevalence of whole milk in the lists'
+*The rules involving whole milk seem to follow a trend of high confidence rules having the highest lift as well, indicating a pretty consistent relationship between the items
+
+##Graphs - Relationship between items
+Finally, let us create graphs for each of these item specific rule sets to see how the relationships looks between items as a whole within the subset as well
+
+First, for root vegetables:
+```{r, echo = FALSE}
+plot(rv_rules, method = "graph", shading = "lift")
+```
+###Observations:
+*We can observe that the lists with whole milk and other dairy products have comparatively higher support due to the prevalence of these products
+*However, beef and root vegetables have a very high lift, hinting at the popularity of 'Beef and potatoes' as a meal
+
+Now, for whole milk:
+```{r, echo = FALSE}
+plot(wm_rules, method = "graph", shading = "lift")
+```
+###Observations:
+*This plot is a bit more cluttered due to the number of rules containing whole milk
+*We can clearly note the association with other dairy products
+*However, although the support is bit low, there seem to be a pretty signifcant lift with fruits and vegetables
+
+##Conclusions:
+*Most people tens to buy sets of related items - vegetables, dairy products, etc
+*However, the inter-relationship between these categories threw up some interesting observations
+*Thus if the store is modeled in such a way that meat products are right after the fruit and vegetable section, followed by the dairy section, this would significantly bnoost sales a=for the store, with people tending to be more likely to buying these items together
